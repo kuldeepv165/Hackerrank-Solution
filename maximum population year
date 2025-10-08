@@ -1,0 +1,24 @@
+class Solution {
+public:
+    int maximumPopulation(vector<vector<int>>& logs) {
+        vector<int> pop(2051, 0);
+
+        // Step 1: Mark population changes
+        for (auto &log : logs) {
+            pop[log[0]]++;
+            pop[log[1]]--;
+        }
+
+        // Step 2: Prefix sum to compute actual population
+        int maxPop = 0, year = 1950, currPop = 0;
+        for (int i = 1950; i <= 2050; i++) {
+            currPop += pop[i];
+            if (currPop > maxPop) {
+                maxPop = currPop;
+                year = i;
+            }
+        }
+
+        return year;
+    }
+};
