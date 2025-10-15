@@ -1,0 +1,271 @@
+#include <assert.h>
+#include <ctype.h>
+#include <limits.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+char* readline();
+char* ltrim(char*);
+char* rtrim(char*);
+char** split_string(char*);
+
+int parse_int(char*);
+
+// Helper structure to store the value and its original index
+typedef struct {
+    int value;
+    int index;
+} Element;
+
+// Comparison function for qsort: Ascending order by value
+int compare_asc(const void* a, const void* b) {
+    return ((Element*)a)->value - ((Element*)b)->value;
+}
+
+// Comparison function for qsort: Descending order by value
+int compare_desc(const void* a, const void* b) {
+    return ((Element*)b)->value - ((Element*)a)->value;
+}
+
+/**
+ * @brief Calculates the minimum number of swaps required to sort an array
+ * using a specific sort order (ascending or descending).
+ * * The function uses the cycle decomposition method: min_swaps = sum(cycle_length - 1).
+ * * @param arr_count The number of elements in the array.
+ * @param arr The original integer array.
+ * @param compare_func The qsort comparison function (compare_asc or compare_desc).
+ * @return The minimum number of swaps.
+ */
+int calculate_min_swaps(int arr_count, int* arr, int (*compare_func)(const void*, const void*)) {
+    // 1. Create an array of structs to hold values and their original indices
+    Element* elements = (Element*)malloc(arr_count * sizeof(Element));
+    if (elements == NULL) return -1; // Memory allocation error
+
+    for (int i = 0; i < arr_count; i++) {
+        elements[i].value = arr[i];
+        elements[i].index = i;
+    }
+
+    // 2. Sort the elements array based on the desired order
+    // This gives the target permutation: elements[i].index is the original position
+    // of the value that SHOULD be at index i.
+    qsort(elements, arr_count, sizeof(Element), compare_func);
+
+    // 3. Create a visited array for cycle detection
+    bool* visited = (bool*)calloc(arr_count, sizeof(bool));
+    if (visited == NULL) {
+        free(elements);
+        return -1; // Memory allocation error
+    }
+
+    int swaps = 0;
+
+    // 4. Iterate and find cycles in the permutation
+    for (int i = 0; i < arr_count; i++) {
+        // If the element is already in its final sorted position (elements[i].index == i)
+        // OR if it's already part of a counted cycle, skip it.
+        if (visited[i] || elements[i].index == i) {
+            continue;
+        }
+
+        // Start a new cycle
+        int cycle_size = 0;
+        int current_index = i;
+
+        // Traverse the cycle
+        while (!visited[current_index]) {
+            visited[current_index] = true;
+            // Move to the position where the element *at* elements[current_index].index *should* be
+            // This is the core of cycle traversal based on the desired final permutation.
+            current_index = elements[current_index].index;
+            cycle_size++;
+        }
+
+        // Swaps for a cycle of size 'k' is 'k - 1'
+        if (cycle_size > 0) {
+            swaps += (cycle_size - 1);
+        }
+    }
+
+    // 5. Clean up and return the result
+    free(elements);
+    free(visited);
+    return swaps;
+}
+
+
+/*
+ * Complete the 'lilysHomework' function below.
+ *
+ * The function is expected to return an INTEGER.
+ * The function accepts INTEGER_ARRAY arr as parameter.
+ */
+int lilysHomework(int arr_count, int* arr) {
+    // Lily's Homework requires the minimum swaps to sort into *either* ascending or descending order.
+
+    // 1. Calculate minimum swaps for ascending order
+    int swaps_asc = calculate_min_swaps(arr_count, arr, compare_asc);
+
+    // 2. Calculate minimum swaps for descending order
+    int swaps_desc = calculate_min_swaps(arr_count, arr, compare_desc);
+
+    // 3. Return the minimum of the two swap counts
+    if (swaps_asc < 0 || swaps_desc < 0) {
+        // Handle memory error case from helper function (should not happen in typical constraints)
+        return INT_MAX; 
+    }
+    
+    return (swaps_asc < swaps_desc) ? swaps_asc : swaps_desc;
+}
+
+int main()
+{
+    // The problem requires these utility functions to be present, which are provided below.
+    FILE* fptr = fopen(getenv("OUTPUT_PATH"), "w");
+
+    int n = parse_int(ltrim(rtrim(readline())));
+
+    char** arr_temp = split_string(rtrim(readline()));
+
+    int* arr = malloc(n * sizeof(int));
+
+    for (int i = 0; i < n; i++) {
+        int arr_item = parse_int(*(arr_temp + i));
+
+        *(arr + i) = arr_item;
+    }
+
+    int result = lilysHomework(n, arr);
+
+    fprintf(fptr, "%d\n", result);
+
+    fclose(fptr);
+
+    return 0;
+}
+
+// PROVIDED UTILITY FUNCTIONS (unchanged)
+char* readline() {
+    size_t alloc_length = 1024;
+    size_t data_length = 0;
+
+    char* data = malloc(alloc_length);
+
+    while (true) {
+        char* cursor = data + data_length;
+        char* line = fgets(cursor, alloc_length - data_length, stdin);
+
+        if (!line) {
+            break;
+        }
+
+        data_length += strlen(cursor);
+
+        if (data_length < alloc_length - 1 || data[data_length - 1] == '\n') {
+            break;
+        }
+
+        alloc_length <<= 1;
+
+        data = realloc(data, alloc_length);
+
+        if (!data) {
+            data = '\0';
+
+            break;
+        }
+    }
+
+    if (data[data_length - 1] == '\n') {
+        data[data_length - 1] = '\0';
+
+        data = realloc(data, data_length);
+
+        if (!data) {
+            data = '\0';
+        }
+    } else {
+        data = realloc(data, data_length + 1);
+
+        if (!data) {
+            data = '\0';
+        } else {
+            data[data_length] = '\0';
+        }
+    }
+
+    return data;
+}
+
+char* ltrim(char* str) {
+    if (!str) {
+        return '\0';
+    }
+
+    if (!*str) {
+        return str;
+    }
+
+    while (*str != '\0' && isspace(*str)) {
+        str++;
+    }
+
+    return str;
+}
+
+char* rtrim(char* str) {
+    if (!str) {
+        return '\0';
+    }
+
+    if (!*str) {
+        return str;
+    }
+
+    char* end = str + strlen(str) - 1;
+
+    while (end >= str && isspace(*end)) {
+        end--;
+    }
+
+    *(end + 1) = '\0';
+
+    return str;
+}
+
+char** split_string(char* str) {
+    char** splits = NULL;
+    char* token = strtok(str, " ");
+
+    int spaces = 0;
+
+    while (token) {
+        splits = realloc(splits, sizeof(char*) * ++spaces);
+
+        if (!splits) {
+            return splits;
+        }
+
+        splits[spaces - 1] = token;
+
+        token = strtok(NULL, " ");
+    }
+
+    return splits;
+}
+
+int parse_int(char* str) {
+    char* endptr;
+    int value = strtol(str, &endptr, 10);
+
+    if (endptr == str || *endptr != '\0') {
+        exit(EXIT_FAILURE);
+    }
+
+    return value;
+}
