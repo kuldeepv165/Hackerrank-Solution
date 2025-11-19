@@ -1,0 +1,66 @@
+string happyLadybugs(string b) {
+    // 1. Count the frequency of each ladybug color
+    // Use an array of size 26 for 'A'-'Z'
+    // and a separate check for empty spaces '_'.
+    
+    map<char, int> counts;
+    bool has_empty_space = false;
+    
+    for (char c : b) {
+        if (c == '_') {
+            has_empty_space = true;
+        } else {
+            counts[c]++;
+        }
+    }
+    
+    // Check if any ladybug color appears only once (cannot be made happy)
+    for (auto const& [key, val] : counts) {
+        if (val == 1) {
+            return "NO";
+        }
+    }
+    
+    // If all ladybug colors appear >= 2, we check the empty space condition.
+    
+    // 2. Check for empty spaces
+    if (has_empty_space) {
+        // If there is an empty space, we can re-arrange everything.
+        // Since no color appears only once (checked above), all ladybugs 
+        // can be grouped and made happy.
+        return "YES";
+    }
+    
+    // 3. No empty spaces: Must check if the current configuration is already happy
+    int n = b.length();
+    if (n == 0) {
+        // An empty string is technically a happy state
+        return "YES";
+    }
+    
+    for (int i = 0; i < n; ++i) {
+        // Check if the current ladybug b[i] is adjacent to another of the same color.
+        
+        bool is_happy = false;
+        
+        // Check left neighbor (i > 0)
+        if (i > 0 && b[i] == b[i-1]) {
+            is_happy = true;
+        }
+        
+        // Check right neighbor (i < n-1)
+        if (i < n - 1 && b[i] == b[i+1]) {
+            is_happy = true;
+        }
+        
+        // If the ladybug is not happy, and there are no moves (no '_'), 
+        // then the arrangement is impossible.
+        if (!is_happy) {
+            return "NO";
+        }
+    }
+    
+    // If we reach here, it means no empty spaces, AND all ladybugs 
+    // are happy in the current arrangement.
+    return "YES";
+}
